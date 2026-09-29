@@ -1,9 +1,4 @@
-﻿
-Path                                                                                          Hash                                      
-----                                                                                          ----                                      
-C:\Users\joeldarnes\Documents\AE\pusvdd\run_MNIST_1_0_PUSVDD.log                              232C2769529ED4EFB7C2AC9AA0B2E8DD6C12DA8...
-C:\Users\joeldarnes\Documents\AE\pusvdd\results\MNIST_1_0_PUSVDD_0.1_100_0.0001_128_42.json   032E6A85FCA865DA8726D91D30771A74E087B49...
-C:\Users\joeldarnes\Documents\AE\pusvdd\images\MNIST_1_0_PUSVDD_0.1_100_0.0001_128_42.pdf     B1E9B2F3EF877FE863DFC145A3866623528E7EF...
-C:\Users\joeldarnes\Documents\AE\pusvdd\checkpoints\MNIST_1_0_PUSVDD_0.1_100_0.0001_128_42.pt 7F655A4E39FCDC72C7327BF16BA63BA637D15E6...
-
-
+232C2769529ED4EFB7C2AC9AA0B2E8DD6C12DA80F4E3A8C87509A83B39F5C216  C:\Users\joeldarnes\Documents\AE\pusvdd\run_MNIST_1_0_PUSVDD.log
+032E6A85FCA865DA8726D91D30771A74E087B496EFE24F9BAD1EC18085E66ECD  C:\Users\joeldarnes\Documents\AE\pusvdd\results\MNIST_1_0_PUSVDD_0.1_100_0.0001_128_42.json
+B1E9B2F3EF877FE863DFC145A3866623528E7EF446F843929F9EDDB902500549  C:\Users\joeldarnes\Documents\AE\pusvdd\images\MNIST_1_0_PUSVDD_0.1_100_0.0001_128_42.pdf
+7F655A4E39FCDC72C7327BF16BA63BA637D15E6662A154A7C80B4B113D98FE23  C:\Users\joeldarnes\Documents\AE\pusvdd\checkpoints\MNIST_1_0_PUSVDD_0.1_100_0.0001_128_42.pt
