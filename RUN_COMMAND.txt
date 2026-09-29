@@ -1,0 +1,1 @@
+python main.py --dataset MNIST --normal_class 1 --unseen_anomaly 0 --algorithm PUSVDD
