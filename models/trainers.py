@@ -62,9 +62,29 @@ class Trainer:
             # Early stopping
             if mean_valid_loss < self.min_valid_loss:
                 self.min_valid_loss = mean_valid_loss
-                torch.save(model.state_dict(), checkpoint)
+
+                if isinstance(model, detectors.DeepSVDD):
+                    torch.save(
+                        {
+                            "model_state_dict": model.state_dict(),
+                            "center": None if model.c is None else model.c.detach().cpu(),
+                        },
+                        checkpoint,
+                    )
+                else:
+                    torch.save(model.state_dict(), checkpoint)
+
                 prompt += " / Save"
 
             print(prompt)
 
-        model.load_state_dict(torch.load(checkpoint, weights_only=True))
+        checkpoint_data = torch.load(checkpoint, map_location=self.device, weights_only=True)
+
+        # New DeepSVDD/PUSVDD checkpoint format: weights + center.
+        # Legacy checkpoints remain loadable for backward compatibility.
+        if isinstance(checkpoint_data, dict) and "model_state_dict" in checkpoint_data:
+            model.load_state_dict(checkpoint_data["model_state_dict"])
+            if isinstance(model, detectors.DeepSVDD) and checkpoint_data.get("center") is not None:
+                model.set_center(checkpoint_data["center"].to(self.device))
+        else:
+            model.load_state_dict(checkpoint_data)
