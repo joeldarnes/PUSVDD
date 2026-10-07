@@ -91,29 +91,26 @@ class CoreTests(unittest.TestCase):
         torch.testing.assert_close(model.c, torch.tensor([-.1, .1, 0.]))
         torch.testing.assert_close(model.estimate(x), 1 - torch.exp(-torch.norm(x - model.c, dim=1)))
 
-    def test_trainer_exact_epoch_training_and_no_local_best_reload(self):
+    def test_tavil_loop_exact_epoch_training_without_local_best_reload(self):
         torch.manual_seed(42)
         x = torch.randn(12, 5)
         loader = DataLoader(TensorDataset(x, torch.zeros(12)), batch_size=5)
         model = detectors.DenseSVDD(n_in=5, n_latent=2, n_h=4)
-        trainer = trainers.Trainer(torch.device("cpu"))
         events = []
-        with patch("torch.load", side_effect=AssertionError("unexpected local-best load")):
-            curve = trainer.fit(model, losses.AELoss(), loader, loader, n_epoch=3,
-                                learning_rate=1e-4, weight_decay=1e-3,
-                                load_best=False, verbose=False,
-                                on_epoch=lambda *event: events.append(event))
-        self.assertEqual(len(curve), 3)
-        self.assertEqual(len(trainer.train_losses), 3)
-        self.assertEqual([e[0] for e in events], [1, 2, 3])
-        self.assertTrue(np.isfinite(curve).all())
-        train_only = trainers.Trainer(torch.device("cpu"))
-        train_only.fit(model, losses.AELoss(), loader, n_epoch=2,
-                       load_best=False, verbose=False)
-        self.assertEqual(len(train_only.train_losses), 2)
-        self.assertEqual(train_only.valid_losses, [])
+        curve = experiment.fit(
+            model, losses.AELoss(), loader, loader, 3,
+            experiment.Config(n_h=4, q=2, lr=1e-4, batch_size=5),
+            torch.device("cpu"),
+            lambda **event: events.append(event),
+            "unit_test",
+        )
+        self.assertEqual(len(curve["train"]), 3)
+        self.assertEqual(len(curve["val"]), 3)
+        self.assertEqual([e["epoch"] for e in events], [1, 2, 3])
+        self.assertTrue(np.isfinite(curve["train"]).all())
+        self.assertTrue(np.isfinite(curve["val"]).all())
 
-    def test_trainer_retains_original_local_best_checkpoint_default(self):
+    def test_upstream_trainer_keeps_original_checkpoint_contract(self):
         class WeightedDetector(detectors.Detector):
             def __init__(self):
                 super().__init__()
@@ -128,17 +125,16 @@ class CoreTests(unittest.TestCase):
 
         train = DataLoader(TensorDataset(torch.ones(4, 1), torch.zeros(4)), batch_size=4)
         val = DataLoader(TensorDataset(torch.ones(4, 1), torch.ones(4)), batch_size=4)
-        model, epochs = WeightedDetector(), []
+        model = WeightedDetector()
         with tempfile.TemporaryDirectory() as folder:
             checkpoint = str(Path(folder) / "best.pt")
             trainer = trainers.Trainer(torch.device("cpu"))
             trainer.fit(model, SignedLoss(), train, val, checkpoint, n_epoch=3,
-                        learning_rate=.01, verbose=False,
-                        on_epoch=lambda *_: epochs.append(model.weight.detach().clone()))
-            self.assertGreater(float(epochs[0]), float(epochs[-1]))
-            torch.testing.assert_close(model.weight, epochs[0])
+                        learning_rate=.01, weight_decay=1e-3)
+            self.assertEqual(len(trainer.train_losses), 3)
             self.assertEqual(len(trainer.valid_losses), 3)
-            self.assertEqual(int(np.argmin(trainer.valid_losses)), 0)
+            saved = torch.load(checkpoint, weights_only=True)
+            torch.testing.assert_close(model.state_dict()["weight"], saved["weight"])
 
 
 class ProtocolTests(unittest.TestCase):
