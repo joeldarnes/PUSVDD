@@ -109,13 +109,40 @@ def new_model(n_features, config, device):
 
 
 def fit(model, criterion, train_loader, valid_loader, epochs, config, device, progress, phase):
-    trainer = trainers.Trainer(device)
-    trainer.fit(model, criterion, train_loader, valid_loader, checkpoint=None,
-                n_epoch=epochs, learning_rate=config.lr, weight_decay=1e-3,
-                load_best=False, verbose=False,
-                on_epoch=lambda e, tr, va: progress(phase=phase, epoch=e,
-                    epochs=epochs, train_loss=tr, val_loss=va if valid_loader is not None else None))
-    return dict(train=trainer.train_losses, val=trainer.valid_losses)
+    """Exact-epoch TAVIL loop; deliberately independent of upstream Trainer."""
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=1e-3)
+    train_losses, valid_losses = [], []
+    for epoch in range(int(epochs)):
+        model.train()
+        mean_train = 0.0
+        for x, y in train_loader:
+            x, y = x.to(device), y.to(device)
+            optimizer.zero_grad()
+            loss = criterion(model(x), y)
+            if not torch.isfinite(loss):
+                raise FloatingPointError("Non-finite training loss")
+            loss.backward()
+            optimizer.step()
+            mean_train += loss.item() / len(train_loader)
+        train_losses.append(mean_train)
+
+        mean_valid = None
+        if valid_loader is not None:
+            model.eval()
+            value = 0.0
+            with torch.no_grad():
+                for x, y in valid_loader:
+                    x, y = x.to(device), y.to(device)
+                    loss = criterion(model(x), y)
+                    if not torch.isfinite(loss):
+                        raise FloatingPointError("Non-finite validation loss")
+                    value += loss.item() / len(valid_loader)
+            mean_valid = value
+            valid_losses.append(value)
+
+        progress(phase=phase, epoch=epoch + 1, epochs=int(epochs),
+                 train_loss=mean_train, val_loss=mean_valid)
+    return dict(train=train_losses, val=valid_losses)
 
 
 def inner_runs(inner_cache, config):
